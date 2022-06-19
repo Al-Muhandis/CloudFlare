@@ -22,6 +22,7 @@ type
   published
     procedure ReadUniversalSSL;                                                                        
     procedure ListZones;
+    procedure EditUniversalSSLSettings;
   end;
 
 implementation
@@ -48,7 +49,26 @@ end;
 
 procedure TTestCloudFlare.ListZones;
 begin
+  FCloudFlare.Parameters['page']:='2';
   FCloudFlare.ListZones;
+end;
+
+procedure TTestCloudFlare.EditUniversalSSLSettings;
+var
+  aID: String;
+begin
+  FCloudFlare.Parameters['name']:='sample.com';
+  ListZones;
+  with FCloudFlare.JSONResponse do
+  begin
+    if Booleans['success'] then
+      if Arrays['result'].Count>0 then
+      begin
+        aID:=(Arrays['result'][0] as TJSONObject).Strings['id'];
+        FCloudFlare.UniversalSSLSettingsDetails(aID);
+      end;
+  end;
+  FCloudFlare.EditUniversalSSLSettings(aID, True);
 end;
 
 procedure TTestCloudFlare.ListZonesByName(const aDomainName: String);

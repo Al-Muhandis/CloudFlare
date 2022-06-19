@@ -18,8 +18,11 @@ type
     FJSON: TJSONObject;
     FParameters: TStringList;
     FResponse: String;
+    function GetAccountEmail: String;
+    function GetAPIKey: String;
     function GetJSONResponse: TJSONObject;
     function GetParameters(const aName: String): String;
+    function JSONStringFromObject(aObject: TObject): String;
     function RouteURL(const aObject, aObjectID, aPath: String): String;
     procedure SetAccountEmail(const AValue: String);
     procedure SetAPIKey(const AValue: String);
@@ -29,9 +32,10 @@ type
     destructor Destroy; override;
     procedure ListZones;
     procedure UniversalSSLSettingsDetails(const aZoneID: String);
+    procedure EditUniversalSSLSettings(const aZoneID: String; aEnabled: Boolean);
     procedure RawSendMethod(const aMethod, aObject: String; const aObjectID: String = ''; const aPath: String = '');
-    property APIKey: String write SetAPIKey;
-    property AccountEmail: String write SetAccountEmail;
+    property APIKey: String read GetAPIKey write SetAPIKey;
+    property AccountEmail: String read GetAccountEmail write SetAccountEmail;
     property Response: String read FResponse;
     property JSONResponse: TJSONObject read GetJSONResponse;
     property Parameters[aName: String]: String read GetParameters write SetParameters;
@@ -41,7 +45,7 @@ type
 implementation
 
 uses
-  opensslsockets
+  opensslsockets, fpjsonrtti
   ;
 
 const
@@ -49,12 +53,26 @@ const
   _GET='GET';
   _PATCH='PATCH';
   _zones='zones';
+  _pth_UnvrslSSLStngs='ssl/universal/settings';
+
+  _AuthEmail='X-Auth-Email';
+  _APIKey='X-Auth-Key';
+
+type
+  { TUniversalSetting }
+
+  TUniversalSetting = class
+  private
+    FEnabled: Boolean;
+  published
+    property enabled: Boolean read FEnabled write FEnabled;
+  end;
 
 { TCloudFlareAPI }
 
 procedure TCloudFlareAPI.SetAPIKey(const AValue: String);
 begin
-  FHTTPClient.AddHeader('X-Auth-Key', AValue);
+  FHTTPClient.AddHeader(_APIKey, AValue);
 end;
 
 procedure TCloudFlareAPI.SetParameters(aName: String; AValue: String);
@@ -64,7 +82,7 @@ end;
 
 procedure TCloudFlareAPI.SetAccountEmail(const AValue: String);
 begin
-  FHTTPClient.AddHeader('X-Auth-Email', AValue);
+  FHTTPClient.AddHeader(_AuthEmail, AValue);
 end;
 
 function TCloudFlareAPI.GetJSONResponse: TJSONObject;
@@ -72,6 +90,16 @@ begin
   FJSON.Free;
   FJSON:=GetJSON(Response) as TJSONObject;
   Result:=FJSON;
+end;
+
+function TCloudFlareAPI.GetAPIKey: String;
+begin
+  Result:=FHTTPClient.GetHeader(_APIKey);
+end;
+
+function TCloudFlareAPI.GetAccountEmail: String;
+begin
+  Result:=FHTTPClient.GetHeader(_AuthEmail);
 end;
 
 function TCloudFlareAPI.GetParameters(const aName: String): String;
@@ -88,6 +116,18 @@ begin
   if aObjectID.IsEmpty then
     Exit;
   Result+=aObjectID+'/'+aPath;
+end;
+
+function TCloudFlareAPI.JSONStringFromObject(aObject: TObject): String;
+var
+  aStreamer: TJSONStreamer;
+begin
+  aStreamer := TJSONStreamer.Create(nil);
+  try
+    Result:=aStreamer.ObjectToJSONString(aObject);
+  finally
+    aStreamer.Free;
+  end;
 end;
 
 constructor TCloudFlareAPI.Create;
@@ -113,7 +153,25 @@ end;
 
 procedure TCloudFlareAPI.UniversalSSLSettingsDetails(const aZoneID: String);
 begin
-  RawSendMethod(_GET, _zones, aZoneID, 'ssl/universal/settings');
+  RawSendMethod(_GET, _zones, aZoneID, _pth_UnvrslSSLStngs);
+end;
+
+procedure TCloudFlareAPI.EditUniversalSSLSettings(const aZoneID: String; aEnabled: Boolean);
+var
+  aData: TUniversalSetting;
+begin
+  aData:=TUniversalSetting.Create;
+  aData.enabled:=aEnabled;
+  try
+    FHTTPClient.RequestBody:=TRawByteStringStream.Create(JSONStringFromObject(aData));
+    try
+      RawSendMethod(_PATCH, _zones, aZoneID, _pth_UnvrslSSLStngs);
+    finally
+      FHTTPClient.RequestBody.Free;
+    end;
+  finally
+    aData.Free;
+  end;
 end;
 
 procedure TCloudFlareAPI.RawSendMethod(const aMethod, aObject: String; const aObjectID: String; const aPath: String);

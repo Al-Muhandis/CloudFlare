@@ -3,7 +3,8 @@ program gui;
 {$mode objfpc}{$H+}
 
 uses
-  Interfaces, Forms, GuiTestRunner, testcloudflareapi, cloudflareapi, configuration;
+  Interfaces, Forms, GuiTestRunner, testcloudflareapi, configuration
+  ;
 
 {$R *.res}
 
