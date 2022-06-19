@@ -29,6 +29,7 @@ type
     procedure SetParameters(aName: String; AValue: String);
   public
     constructor Create;
+    procedure ClearParameters;
     destructor Destroy; override;
     procedure ListZones;
     procedure UniversalSSLSettingsDetails(const aZoneID: String);
@@ -136,6 +137,11 @@ begin
   FHTTPClient.AddHeader('Content-Type', 'application/json');
   FParameters:=TStringList.Create;
   FParameters.Delimiter:='&';
+end;
+
+procedure TCloudFlareAPI.ClearParameters;
+begin
+  FParameters.Clear;
 end;
 
 destructor TCloudFlareAPI.Destroy;

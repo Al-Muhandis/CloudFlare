@@ -34,7 +34,8 @@ uses
 procedure TTestCloudFlare.ReadUniversalSSL;
 var
   aID: String;
-begin
+begin      
+  FCloudFlare.Parameters['name']:='sample.com';
   ListZones;
   with FCloudFlare.JSONResponse do
   begin
@@ -49,7 +50,6 @@ end;
 
 procedure TTestCloudFlare.ListZones;
 begin
-  FCloudFlare.Parameters['page']:='2';
   FCloudFlare.ListZones;
 end;
 
