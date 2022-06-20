@@ -5,7 +5,7 @@ unit cloudflareapi;
 interface
 
 uses
-  Classes, SysUtils, fphttpclient, fpjson
+  Classes, SysUtils, fphttpclient, fpjson, openssl, opensslsockets
   ;
 
 type
@@ -46,7 +46,7 @@ type
 implementation
 
 uses
-  opensslsockets, fpjsonrtti
+  fpjsonrtti
   ;
 
 const
@@ -137,11 +137,14 @@ begin
   FHTTPClient.AddHeader('Content-Type', 'application/json');
   FParameters:=TStringList.Create;
   FParameters.Delimiter:='&';
+  FParameters.StrictDelimiter:=True;
 end;
 
 procedure TCloudFlareAPI.ClearParameters;
 begin
-  FParameters.Clear;
+  FParameters.Text:=EmptyStr;
+  FParameters.Delimiter:='&'; 
+  FParameters.StrictDelimiter:=True;
 end;
 
 destructor TCloudFlareAPI.Destroy;
@@ -173,7 +176,8 @@ begin
     try
       RawSendMethod(_PATCH, _zones, aZoneID, _pth_UnvrslSSLStngs);
     finally
-      FHTTPClient.RequestBody.Free;
+      FHTTPClient.RequestBody.Free; 
+      FHTTPClient.RequestBody:=nil;
     end;
   finally
     aData.Free;
@@ -187,9 +191,10 @@ var
 begin
   SS:=TRawByteStringStream.Create(EmptyStr);
   try
+    FResponse:=EmptyStr;
     if FParameters.Count>0 then
       aParameters:='?'+FParameters.DelimitedText;
-    FHTTPClient.HTTPMethod(aMethod, RouteURL(aObject, aObjectID, aPath)+aParameters, SS, []);
+    FHTTPClient.HTTPMethod(aMethod, RouteURL(aObject, aObjectID, aPath)+aParameters, SS, [200]);
     FResponse:=SS.DataString;
   finally
     SS.Free;
